@@ -133,8 +133,8 @@ function App(){
   const ready=useRef(false);
 
   // Guardar local siempre
-  useEffect(()=>{LS.s('tg3',prods);},[prods]);
-  useEffect(()=>{LS.s('tgv',ventas);},[ventas]);
+  useEffect(()=>{LS.s('tg3',prods);LS.s('tg_updatedat',Date.now());},[prods]);
+  useEffect(()=>{LS.s('tgv',ventas);LS.s('tg_updatedat',Date.now());},[ventas]);
   useEffect(()=>{LS.s('tgs',stock);},[stock]);
   useEffect(()=>{LS.s('tge',extra);},[extra]);
 
@@ -145,7 +145,9 @@ function App(){
     setCStatus('syncing');
     syncTimer.current=setTimeout(async()=>{
       try{
-        await gistWrite(token,gistId,{prods:p,ventas:v,stock:s,extra:e});
+        const ts=Date.now();
+        await gistWrite(token,gistId,{prods:p,ventas:v,stock:s,extra:e,updatedAt:ts});
+        LS.s('tg_updatedat',ts);
         setCStatus('ok');setCMsg('Guardado en GitHub ✓');
         setTimeout(()=>setCStatus('idle'),3000);
       }catch(err){setCStatus('error');setCMsg('Sin conexión');}
@@ -159,11 +161,23 @@ function App(){
     if(!token||!gistId){ready.current=true;return;}
     setCStatus('syncing');setCMsg('Cargando desde GitHub...');
     gistRead(token,gistId).then(data=>{
-      if(data.prods)setProds(migrarProds(data.prods));
-      if(data.ventas)setVentas(data.ventas);
-      if(data.stock)setStock(data.stock);
-      if(data.extra)setExtra(data.extra);
-      setCStatus('ok');setCMsg('GitHub cargado ✓');
+      // Comparar timestamps: quedarse con el más reciente
+      const tsCloud=data.updatedAt||0;
+      const tsLocal=LS.g('tg_updatedat')||0;
+      if(tsCloud>tsLocal){
+        // Nube es más reciente
+        if(data.prods)setProds(migrarProds(data.prods));
+        if(data.ventas)setVentas(data.ventas);
+        if(data.stock)setStock(data.stock);
+        if(data.extra)setExtra(data.extra);
+        LS.s('tg_updatedat',tsCloud);
+        setCStatus('ok');setCMsg('Nube cargada ✓');
+      } else {
+        // Local es más reciente — subir local a nube
+        const localData={prods,ventas,stock,extra,updatedAt:tsLocal};
+        gistWrite(token,gistId,localData).catch(()=>{});
+        setCStatus('ok');setCMsg('Datos locales conservados ✓');
+      }
       setTimeout(()=>setCStatus('idle'),3000);
     }).catch(()=>{
       setCStatus('error');setCMsg('Sin conexión — datos locales');
