@@ -43,6 +43,19 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .step{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #F3F4F6}
 .stepnum{min-width:24px;height:24px;border-radius:50%;background:#1F3864;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
 </style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1F3864">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tiendita">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
 </head>
 <body>
 <div id="root"></div>
